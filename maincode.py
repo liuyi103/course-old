@@ -76,3 +76,4 @@ while score(bestnode)>1:
         bestnode=copy.deepcopy(nei[-1])
 score(bestnode)
 print xs
+import xlrd
