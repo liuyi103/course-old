@@ -43,7 +43,6 @@ def opt(i):
     prob=MILP(objective=obj, startPoint=startpoint, constraints=constraints)
     r=prob.solve('ralg')
     return [r(x[j])for j in range(m)]
-round=0
 tabu=[]
 curnode=copy.deepcopy(p)
 def score(node):
@@ -64,9 +63,9 @@ def getnei(node):
             tmp=copy.deepcopy(node)
             tmp[i]=0
             ans+=[tmp]
-        if sum([xs[i][j] for i in range(n)])-q[j]>0:
-            tmp=copy.deepcopy(node)
-            
+#         if sum([xs[i][j] for i in range(n)])-q[j]>0:
+#             tmp=copy.deepcopy(node)
+    return ans
 while score(bestnode)>1:
     tabu+=[curnode]
     nei=getnei(curnode)
