@@ -1,5 +1,4 @@
-from FuncDesigner import *
-from openopt import MILP
+import cplex as cp
 import numpy as np
 import math
 import copy
@@ -32,17 +31,20 @@ def input():
     pass
 input()
 def opt(i):
-    x,xx=oovars('x xx',domain=bin)
-    startpoint={x:[0]*m,xx:[0]*(m*m)}
-    constraints=[sum([x[j]*p[j]for j in range(m)])<=b[i]]+[\
-                                                             (sum(x[k]for k in range(m) if req[i][j][0][k])<=req[i][j][1])\
-                                                             for j in range(len(req[i]))]\
-                                                             +[xx[j*m+k]*2<=x[j]+x[k] for j in range(m) for k in range(m)]\
-                                                             +[xx[j*m+k]*2>=x[j]+x[k]-1 for j in range(m) for k in range(m)]
-    obj=sum([v[i,j]*x[j] for j in range(m)])+sum(xx[j*m+k]*cov[i,j,k] for j in range(m) for k in range(m))
-    prob=MILP(objective=obj, startPoint=startpoint, constraints=constraints)
-    r=prob.solve('ralg')
-    return [r(x[j])for j in range(m)]
+#     x,xx=oovars('x xx',domain=bin)
+#     startpoint={x:[0]*m,xx:[0]*(m*m)}
+#     constraints=[sum([x[j]*p[j]for j in range(m)])<=b[i]]+[\
+#                                                              (sum(x[k]for k in range(m) if req[i][j][0][k])<=req[i][j][1])\
+#                                                              for j in range(len(req[i]))]\
+#                                                              +[xx[j*m+k]*2<=x[j]+x[k] for j in range(m) for k in range(m)]\
+#                                                              +[xx[j*m+k]*2>=x[j]+x[k]-1 for j in range(m) for k in range(m)]
+#     obj=sum([v[i,j]*x[j] for j in range(m)])+sum(xx[j*m+k]*cov[i,j,k] for j in range(m) for k in range(m))
+#     prob=MILP(objective=obj, startPoint=startpoint, constraints=constraints)
+#     r=prob.solve('ralg')
+#     return [r(x[j])for j in range(m)]
+    prob=cp.Cplex()
+    prob.objective.set_sense(prob.objective.sense.maximize)
+    prob.variables.add(obj=[v[i,j] for j in range(m)], types=[prob.variables.type.binary]*m, names=['x%d'%i for j in range(m)], columns)
 tabu=[]
 curnode=copy.deepcopy(p)
 def score(node):
