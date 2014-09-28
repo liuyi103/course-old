@@ -75,3 +75,4 @@ while score(bestnode)>1:
     if score(nei[-1])<score(bestnode):
         bestnode=copy.deepcopy(nei[-1])
 score(bestnode)
+#I just want to have a try
