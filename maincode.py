@@ -75,5 +75,3 @@ while score(bestnode)>1:
     if score(nei[-1])<score(bestnode):
         bestnode=copy.deepcopy(nei[-1])
 score(bestnode)
-print xs
-import xlrd
