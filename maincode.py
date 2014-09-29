@@ -68,9 +68,21 @@ def opt(i):
         prob.solve()
         probs[i]=prob
         return prob.solution.get_objective_value()[:n]
-def adjprice():
-    pass
-opt(0)
+def adjprice(i,k):
+    prob=cp.Cplex()
+    prob=copy.deepcopy(probs[i])
+    prob.linear_constraints.add(lin_expr=[[['x%d'%k],[1]]], senses=['E'], rhs=[0])
+    prob.solve()
+    o=prob.solution.get_objective_value()
+    prob=copy.deepcopy(probs[i])
+    prob.objective.set_sense(prob.objective.sense.minimize)
+    prob.linear_constraints.add( lin_expr=[[range(m*m+m),[v[i,j] for j in range(m)]+[v[i,j,k] for j in range(m) for k in range(m)]]],\
+                                  senses='G', rhs=[o])
+    prob.objective.set_linear([range(m+m*m),[p[j] for j in range(m)]+[0]*(m*m)])
+    prob.linear_constraints.add(lin_expr=[[['x%d'%k],[1]]], senses=['E'], rhs=[1])
+    prob.solve()
+    pi=prob.solution.get_objective_value()
+    return b[i]-pi
 tabu=[]
 curnode=copy.deepcopy(p)
 def score(node):
@@ -86,13 +98,16 @@ def getnei(node):
     while min(node+k*grad)>=0:
         ans+=[node+k*grad]
         k*=2
-    for i in range(m):
+    for j in range(m):
         if sum([xs[i][j] for i in range(n)])-q[j]<0:
             tmp=copy.deepcopy(node)
-            tmp[i]=0
+            tmp[j]=0
             ans+=[tmp]
-#         if sum([xs[i][j] for i in range(n)])-q[j]>0:
-#             tmp=copy.deepcopy(node)
+        if sum([xs[i][j] for i in range(n)])-q[j]>0:
+            tmp=copy.deepcopy(node)
+            dp=min([adjprice(i,j) for i in range(n) if xs[i][j]])
+            tmp[j]+=dp+1e-6
+            ans+=[tmp]
     return ans
 while score(bestnode)>1:
     tabu+=[curnode]
