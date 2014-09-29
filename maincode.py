@@ -2,9 +2,9 @@ import cplex as cp
 import numpy as np
 import math
 import copy
-n=10
-k=10
-m=10
+n=1
+k=3
+m=3
 beta=1.0/k<1.0/n and 1.0/k or 1.0/n
 b=np.random.rand(n)*beta+1
 v=np.random.rand(n,m)
@@ -30,7 +30,9 @@ s=np.random.randint(low=3,high=8,size=m)
 def input():
     pass
 input()
+probs={}
 def opt(i):
+    global probs
 #     x,xx=oovars('x xx',domain=bin)
 #     startpoint={x:[0]*m,xx:[0]*(m*m)}
 #     constraints=[sum([x[j]*p[j]for j in range(m)])<=b[i]]+[\
@@ -42,9 +44,33 @@ def opt(i):
 #     prob=MILP(objective=obj, startPoint=startpoint, constraints=constraints)
 #     r=prob.solve('ralg')
 #     return [r(x[j])for j in range(m)]
-    prob=cp.Cplex()
-    prob.objective.set_sense(prob.objective.sense.maximize)
-    prob.variables.add(obj=[v[i,j] for j in range(m)], types=[prob.variables.type.binary]*m, names=['x%d'%i for j in range(m)], columns)
+    if i in probs:
+        prob=cp.Cplex()
+        prob.objective.set_sense(prob.objective.sense.maximize)
+        prob.variables.add(obj=[v[i,j] for j in range(m)], types=[prob.variables.type.binary]*m, names=['x%d'%j for j in range(m)])
+        prob.variables.add(obj=[cov[i,j,k] for j in range(m) for k in range(m)], types=[prob.variables.type.binary]*(m*m), \
+                      names=['xx%d_%d'%(j,k) for j in range(m) for k in range(m)])
+        prob.linear_constraints.add(lin_expr=[[['x%d'%j for j in range(m)],[p[j] for j in range(m)]]], senses='L', rhs=[b[i]],names=['base'])
+        prob.linear_constraints.add(lin_expr=[[['x%d'%j,'x%d'%k,'xx%d_%d'%(j,k)],[1,1,-2]]for j in range(m) for k in range(m) if j-k],\
+                                     senses=['R']*(m*m-m),rhs=[0]*(m*m-m), range_values=[1]*(m*m-m))
+        rq=req[i]
+        rq=[]
+        print p,b[0]
+        print v,cov
+        prob.linear_constraints.add(lin_expr=[[['x%d'%k for k in range(m) if j[0][k]],[1]*sum(j[0])]for j in rq],\
+                                     senses=['L']*len(rq), rhs=[j[1] for j in rq])
+        prob.solve()
+        probs[i]=prob
+        return prob.solution.get_objective_value()[:n]
+    else:
+        prob=probs[i]
+        prob.linear_constraints.set_coefficients([('base','x%d'%j,p[j]) for j in range(m)])
+        prob.solve()
+        probs[i]=prob
+        return prob.solution.get_objective_value()[:n]
+def adjprice():
+    pass
+opt(0)
 tabu=[]
 curnode=copy.deepcopy(p)
 def score(node):
@@ -77,4 +103,3 @@ while score(bestnode)>1:
     if score(nei[-1])<score(bestnode):
         bestnode=copy.deepcopy(nei[-1])
 score(bestnode)
-import xlrd,xlwt
