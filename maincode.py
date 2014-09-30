@@ -2,15 +2,19 @@ import cplex as cp
 import numpy as np
 import math
 import copy
-n=1
+n=2
 k=3
-m=3
+m=4
 beta=1.0/k<1.0/n and 1.0/k or 1.0/n
 b=np.random.rand(n)*beta+1
+b=[1.1,1]
 v=np.random.rand(n,m)
+v=np.array([[60,30,6,4],[62,32,4,2]])
 cov=np.random.rand(n,m,m)
+cov=np.zeros((n,m,m))
 p=[0.3]*m
 q=np.random.randint(3,10,size=m)
+q=[1,1,1,1]
 xs=[[0 for j in range(m)]for i in range(n)]
 alpha=lambda:math.sqrt(sum([(\
                              np.max([sum([xs[i][j] for i in range(n)])-q[j],(p[j]==0 and 0 or -1e6)])\
@@ -26,7 +30,7 @@ def reqgen(m):
         ans+=[(req,np.random.randint(low=1,high=sum(req)))]
     return ans
 req=[reqgen(m) for i in range(n)]
-s=np.random.randint(low=3,high=8,size=m)
+req=[[]for i in range(n)]
 def input():
     pass
 input()
@@ -44,7 +48,7 @@ def opt(i):
 #     prob=MILP(objective=obj, startPoint=startpoint, constraints=constraints)
 #     r=prob.solve('ralg')
 #     return [r(x[j])for j in range(m)]
-    if i in probs:
+    if not (i in probs):
         prob=cp.Cplex()
         prob.objective.set_sense(prob.objective.sense.maximize)
         prob.variables.add(obj=[v[i,j] for j in range(m)], types=[prob.variables.type.binary]*m, names=['x%d'%j for j in range(m)])
@@ -61,34 +65,49 @@ def opt(i):
                                      senses=['L']*len(rq), rhs=[j[1] for j in rq])
         prob.solve()
         probs[i]=prob
-        return prob.solution.get_objective_value()[:n]
+        return prob.solution.get_values()[:m]
     else:
         prob=probs[i]
         prob.linear_constraints.set_coefficients([('base','x%d'%j,p[j]) for j in range(m)])
         prob.solve()
         probs[i]=prob
-        return prob.solution.get_objective_value()[:n]
-def adjprice(i,k):
+        return prob.solution.get_values()[:m]
+def adjprice(i,kk):
     prob=cp.Cplex()
-    prob=copy.deepcopy(probs[i])
-    prob.linear_constraints.add(lin_expr=[[['x%d'%k],[1]]], senses=['E'], rhs=[0])
+    prob.objective.set_sense(prob.objective.sense.maximize)
+    prob.variables.add(obj=[v[i,j] for j in range(m)], types=[prob.variables.type.binary]*m, names=['x%d'%j for j in range(m)])
+    prob.variables.add(obj=[cov[i,j,k] for j in range(m) for k in range(m)], types=[prob.variables.type.binary]*(m*m), \
+                  names=['xx%d_%d'%(j,k) for j in range(m) for k in range(m)])
+    prob.linear_constraints.add(lin_expr=[[['x%d'%j for j in range(m)],[p[j] for j in range(m)]]], senses='L', rhs=[b[i]],names=['base'])
+    prob.linear_constraints.add(lin_expr=[[['x%d'%j,'x%d'%k,'xx%d_%d'%(j,k)],[1,1,-2]]for j in range(m) for k in range(m) if j-k],\
+                                 senses=['R']*(m*m-m),rhs=[0]*(m*m-m), range_values=[1]*(m*m-m))
+    rq=req[i]
+    prob.linear_constraints.add(lin_expr=[[['x%d'%kk],[1]]], senses=['E'], rhs=[0],names=['new'])
+    prob.linear_constraints.add(lin_expr=[[['x%d'%k for k in range(m) if j[0][k]],[1]*sum(j[0])]for j in rq],\
+                                 senses=['L']*len(rq), rhs=[j[1] for j in rq])
     prob.solve()
     o=prob.solution.get_objective_value()
-    prob=copy.deepcopy(probs[i])
     prob.objective.set_sense(prob.objective.sense.minimize)
-    prob.linear_constraints.add( lin_expr=[[range(m*m+m),[v[i,j] for j in range(m)]+[v[i,j,k] for j in range(m) for k in range(m)]]],\
-                                  senses='G', rhs=[o])
-    prob.objective.set_linear([range(m+m*m),[p[j] for j in range(m)]+[0]*(m*m)])
-    prob.linear_constraints.add(lin_expr=[[['x%d'%k],[1]]], senses=['E'], rhs=[1])
+    prob.linear_constraints.add( lin_expr=[\
+                                           [[j for j in range(m*m+m)],[v[i,j] for j in range(m)]+[cov[i,j,k] for j in range(m) for k in range(m)]]\
+                                           ],\
+                                  senses=['G'], rhs=[o])
+    prob.objective.set_linear([(j,p[j]) for j in range(m)]+[(m+j,0) for j in range(m*m)])
+    prob.linear_constraints.set_rhs('new',1)
     prob.solve()
     pi=prob.solution.get_objective_value()
     return b[i]-pi
 tabu=[]
 curnode=copy.deepcopy(p)
 def score(node):
+    global xs
     p=node
     xs=[opt(i) for i in range(n)]
     return alpha()
+def log(s):
+    f=file('log.txt','a')
+    f.write(str(s)+'\n')
+    f.close()
 def getnei(node):
     score(node)
     ans=[]
@@ -109,10 +128,13 @@ def getnei(node):
             tmp[j]+=dp+1e-6
             ans+=[tmp]
     return ans
+ps=[]
 while score(bestnode)>1:
-    tabu+=[curnode]
+    tabu+=[list(curnode)]
     nei=getnei(curnode)
-    while nei[-1] in tabu:
+    ps+=[curnode]
+    log(ps)
+    while list(nei[-1]) in tabu:
         nei.pop()
     curnode=nei[-1]
     if score(nei[-1])<score(bestnode):
