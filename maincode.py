@@ -2,6 +2,9 @@ import cplex as cp
 import numpy as np
 import math
 import copy
+f=file('log.txt','w')
+f.write('')
+f.close()
 n=2
 k=3
 m=4
@@ -68,6 +71,7 @@ def opt(i):
         return prob.solution.get_values()[:m]
     else:
         prob=probs[i]
+        log(p)
         prob.linear_constraints.set_coefficients([('base','x%d'%j,p[j]) for j in range(m)])
         prob.solve()
         probs[i]=prob
@@ -100,7 +104,7 @@ def adjprice(i,kk):
 tabu=[]
 curnode=copy.deepcopy(p)
 def score(node):
-    global xs
+    global xs,p
     p=node
     xs=[opt(i) for i in range(n)]
     return alpha()
@@ -133,7 +137,6 @@ while score(bestnode)>1:
     tabu+=[list(curnode)]
     nei=getnei(curnode)
     ps+=[curnode]
-    log(ps)
     while list(nei[-1]) in tabu:
         nei.pop()
     curnode=nei[-1]
