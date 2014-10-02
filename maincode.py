@@ -71,7 +71,6 @@ def opt(i):
         return prob.solution.get_values()[:m]
     else:
         prob=probs[i]
-        log(p)
         prob.linear_constraints.set_coefficients([('base','x%d'%j,p[j]) for j in range(m)])
         prob.solve()
         probs[i]=prob
@@ -119,27 +118,36 @@ def getnei(node):
     node=np.array(node)
     k=0.01
     while min(node+k*grad)>=0:
-        ans+=[node+k*grad]
+        ans+=[(node+k*grad,score(node+k*grad))]
         k*=2
     for j in range(m):
         if sum([xs[i][j] for i in range(n)])-q[j]<0:
             tmp=copy.deepcopy(node)
             tmp[j]=0
-            ans+=[tmp]
+            ans+=[(tmp,score(tmp))]
         if sum([xs[i][j] for i in range(n)])-q[j]>0:
             tmp=copy.deepcopy(node)
             dp=min([adjprice(i,j) for i in range(n) if xs[i][j]])
             tmp[j]+=dp+1e-6
-            ans+=[tmp]
-    return ans
+            ans+=[(tmp,score(tmp))]
+    return sorted(ans,key=lambda x:x[1])
 ps=[]
-while score(bestnode)>1:
+bestv=score(curnode)
+while bestv>1:
     tabu+=[list(curnode)]
-    nei=getnei(curnode)
-    ps+=[curnode]
-    while list(nei[-1]) in tabu:
-        nei.pop()
-    curnode=nei[-1]
-    if score(nei[-1])<score(bestnode):
+    tabu=tabu[max(0,len(tabu)-10):]
+    nei=[i[0] for i in getnei(curnode)]
+    while len(nei) and (list(nei[0]) in tabu):
+        del nei[0]
+    if len(nei)==0:
+        break
+    curnode=nei[0]
+    tv=score(nei[0])
+    log(curnode)
+    log(tv)
+    if tv<bestv:
         bestnode=copy.deepcopy(nei[-1])
-score(bestnode)
+        bestv=tv
+        
+print score(bestnode)
+print xs
