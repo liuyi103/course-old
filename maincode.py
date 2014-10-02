@@ -106,6 +106,7 @@ def score(node):
     global xs,p
     p=node
     xs=[opt(i) for i in range(n)]
+    log(alpha())
     return alpha()
 def log(s):
     f=file('log.txt','a')
@@ -117,7 +118,7 @@ def getnei(node):
     grad=np.array([np.max([sum([xs[i][j] for i in range(n)])-q[j],(p[j]==0 and 0 or -1e6)]) for j in range(m)])
     node=np.array(node)
     k=0.01
-    while min(node+k*grad)>=0:
+    while min(node+k*grad)>=0 and max(node+k*grad)<1.5:
         ans+=[(node+k*grad,score(node+k*grad))]
         k*=2
     for j in range(m):
@@ -133,10 +134,11 @@ def getnei(node):
     return sorted(ans,key=lambda x:x[1])
 ps=[]
 bestv=score(curnode)
-while bestv>1:
+while bestv>0.1:
     tabu+=[list(curnode)]
     tabu=tabu[max(0,len(tabu)-10):]
     nei=[i[0] for i in getnei(curnode)]
+    log(nei)
     while len(nei) and (list(nei[0]) in tabu):
         del nei[0]
     if len(nei)==0:
@@ -144,10 +146,10 @@ while bestv>1:
     curnode=nei[0]
     tv=score(nei[0])
     log(curnode)
-    log(tv)
     if tv<bestv:
-        bestnode=copy.deepcopy(nei[-1])
+        bestnode=copy.deepcopy(nei[0])
         bestv=tv
-        
-print score(bestnode)
+    
+print bestv
+print bestnode
 print xs
