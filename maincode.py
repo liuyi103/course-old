@@ -5,19 +5,19 @@ import copy
 f=file('log.txt','w')
 f.write('')
 f.close()
-n=2
-k=3
-m=4
+n=10
+k=10
+m=10
 beta=1.0/k<1.0/n and 1.0/k or 1.0/n
 b=np.random.rand(n)*beta+1
-b=[1.1,1]
+#b=[1.1,1]
 v=np.random.rand(n,m)
-v=np.array([[60,30,6,4],[62,32,4,2]])
+#v=np.array([[60,30,6,4],[62,32,4,2]])
 cov=np.random.rand(n,m,m)
-cov=np.zeros((n,m,m))
+#cov=np.zeros((n,m,m))
 p=[0.3]*m
-q=np.random.randint(3,10,size=m)
-q=[1,1,1,1]
+q=np.random.randint(m/10,n/3,size=m)
+#q=[1,1,1,1]
 xs=[[0 for j in range(m)]for i in range(n)]
 alpha=lambda:math.sqrt(sum([(\
                              np.max([sum([xs[i][j] for i in range(n)])-q[j],(p[j]==0 and 0 or -1e6)])\
@@ -134,7 +134,7 @@ def getnei(node):
     return sorted(ans,key=lambda x:x[1])
 ps=[]
 bestv=score(curnode)
-while bestv>0.1:
+while bestv>math.sqrt(k*m/2.):
     tabu+=[list(curnode)]
     tabu=tabu[max(0,len(tabu)-10):]
     nei=[i[0] for i in getnei(curnode)]
